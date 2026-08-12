@@ -1,0 +1,6 @@
+[
+    {
+        "caption": "CodeTime: Enter Token",
+        "command": "code_time_set_token"
+    }
+]
