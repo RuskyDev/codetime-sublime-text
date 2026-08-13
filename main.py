@@ -3,7 +3,6 @@ import sublime_plugin # type: ignore
 
 from .codetime import CodeTimeClient, CodeTimeError
 
-
 class CodeTimeSetTokenCommand(sublime_plugin.ApplicationCommand):
     def run(self):
         def on_done(token):
@@ -11,6 +10,8 @@ class CodeTimeSetTokenCommand(sublime_plugin.ApplicationCommand):
             settings.set("CODETIME_TOKEN", token)
             sublime.save_settings("CodeTime.sublime-settings")
             sublime.message_dialog("CodeTime: Token saved")
+            if CodeTime.instance:
+                CodeTime.instance.refresh()
 
         sublime.active_window().show_input_panel(
             "CodeTime Token:",
@@ -20,13 +21,14 @@ class CodeTimeSetTokenCommand(sublime_plugin.ApplicationCommand):
             None
         )
 
-
 class CodeTime(sublime_plugin.EventListener):
+    instance = None
+
     def __init__(self):
-        self.client = None
+        CodeTime.instance = self
         self._status = "CodeTime: Without Token"
         self._pending_status = None
-        self.update()
+        self.refresh()
 
     def _load_token(self):
         settings = sublime.load_settings("CodeTime.sublime-settings")
@@ -68,9 +70,9 @@ class CodeTime(sublime_plugin.EventListener):
             sublime.set_timeout(self._apply_status, 0)
         sublime.set_timeout_async(callback, 0)
 
-    def update(self):
+    def refresh(self):
         self._fetch_status()
-        sublime.set_timeout(self.update, 60000)
+        sublime.set_timeout(self.refresh, 60000)
 
     def on_activated(self, view):
         view.set_status("codetime", self._status)
