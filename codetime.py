@@ -15,17 +15,14 @@ from .events import (
     FILE_SAVED,
 )
 
-
 class CodeTimeError(Exception):
     def __init__(self, message, status_code=None, body=None):
         super(CodeTimeError, self).__init__(message)
         self.status_code = status_code
         self.body = body
 
-
 class CodeTimeAuthError(CodeTimeError):
     pass
-
 
 class CodeTimeClient(object):
     def __init__(self, token, base_url="https://api.codetime.dev", timeout=30):

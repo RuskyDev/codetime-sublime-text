@@ -2,4 +2,8 @@
 
 Automatic coding-time tracking for [codetime.dev](https://codetime.dev), ported from [codetime-vscode](https://github.com/codetime-dev/codetime-vscode)
 
-> Not intended for use yet, it is currently under heavy development.
+> Work in progress — not ready for use.
+
+# What's Working
+- [x] Entering token and saving it.
+- [x] Shows total coding time in the status bar
