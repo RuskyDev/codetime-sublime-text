@@ -4,6 +4,10 @@ import urllib.error
 import platform
 
 from .events import (
+    ACTIVATE_FILE_CHANGED,
+    CHANGE_EDITOR_SELECTION,
+    CHANGE_EDITOR_VISIBLE_RANGES,
+    EDITOR_CHANGED,
     FILE_CREATED,
     FILE_EDITED,
     FILE_ADDED_LINE,
@@ -11,27 +15,16 @@ from .events import (
     FILE_SAVED,
 )
 
-WRITE_EVENTS = {
-    FILE_CREATED,
-    FILE_EDITED,
-    FILE_ADDED_LINE,
-    FILE_REMOVED,
-    FILE_SAVED,
-}
 
 class CodeTimeError(Exception):
-    pass
+    def __init__(self, message, status_code=None, body=None):
+        super(CodeTimeError, self).__init__(message)
+        self.status_code = status_code
+        self.body = body
 
 
 class CodeTimeAuthError(CodeTimeError):
     pass
-
-
-class CodeTimeAPIError(CodeTimeError):
-    def __init__(self, message, status_code, body):
-        super(CodeTimeAPIError, self).__init__(message)
-        self.status_code = status_code
-        self.body = body
 
 
 class CodeTimeClient(object):
@@ -82,8 +75,8 @@ class CodeTimeClient(object):
             body_text = e.read().decode("utf-8") if e.fp else ""
             self._log("HTTP Error %d: %s" % (e.code, body_text))
             if e.code == 401:
-                raise CodeTimeAuthError("Authentication failed: " + body_text)
-            raise CodeTimeAPIError("HTTP %d: %s" % (e.code, body_text), e.code, body_text)
+                raise CodeTimeAuthError("Authentication failed: " + body_text, e.code, body_text)
+            raise CodeTimeError("HTTP %d: %s" % (e.code, body_text), e.code, body_text)
 
         except urllib.error.URLError as e:
             self._log("Network Error: " + str(e.reason))
@@ -101,7 +94,7 @@ class CodeTimeClient(object):
         git_branch=None,
         event_time=None,
     ):
-        operation_type = "write" if event_type in WRITE_EVENTS else "read"
+        operation_type = self._get_operation_type(event_type)
 
         if event_time is None:
             import time as _time
@@ -124,6 +117,11 @@ class CodeTimeClient(object):
 
         self._log("Body: %s" % json.dumps(payload))
         return self._request("POST", "/v3/users/event-log", body=payload)
+
+    def _get_operation_type(self, event_type):
+        if event_type in (FILE_CREATED, FILE_EDITED, FILE_ADDED_LINE, FILE_REMOVED, FILE_SAVED):
+            return "write"
+        return "read"
 
     def get_minutes(self, minutes=1440):
         return self._request("GET", "/v3/users/self/minutes", query={"minutes": str(minutes)})

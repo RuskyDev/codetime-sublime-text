@@ -1,11 +1,8 @@
-import sublime # type: ignore
-import sublime_plugin # type: ignore 
+import sublime
+import sublime_plugin
 
 from .codetime import CodeTimeClient, CodeTimeError
 
-# Currently CodeTime Error: {} <- The error message is showing json object and need to show the error title only eg,.Token Error, Network Error.
-# If CodeTime settings file is forcefully removed, the token is still loaded in memory.
-# Some redudent peices of code which needs to be removed.
 
 class CodeTimeSetTokenCommand(sublime_plugin.ApplicationCommand):
     def run(self):
@@ -23,28 +20,39 @@ class CodeTimeSetTokenCommand(sublime_plugin.ApplicationCommand):
             None
         )
 
+
 class CodeTime(sublime_plugin.EventListener):
     def __init__(self):
-        settings = sublime.load_settings("CodeTime.sublime-settings")
-        token = settings.get("CODETIME_TOKEN", "")
-        self.client = CodeTimeClient(token=token) if token else None
-        self._status = self.get_status()
+        self.client = None
+        self._status = "CodeTime: Without Token"
         self._pending_status = None
         self.update()
 
-    def get_status(self):
-        if self.client:
-            try:
-                minutes = self.client.get_total_minutes()
-                hours = minutes // 60
-                mins = minutes % 60
-                return "%dh %dm" % (hours, mins)
-            except CodeTimeError as e:
-                return "CodeTime Error: %s" % str(e)
-            except Exception as e:
-                return "CodeTime Error: %s" % str(e)
+    def _load_token(self):
+        settings = sublime.load_settings("CodeTime.sublime-settings")
+        return settings.get("CODETIME_TOKEN", "")
 
-        return "CodeTime Error: Not Initialized"
+    def _get_client(self):
+        token = self._load_token()
+        if token:
+            return CodeTimeClient(token=token)
+        return None
+
+    def get_status(self):
+        client = self._get_client()
+        if not client:
+            return "CodeTime: Without Token"
+        try:
+            minutes = client.get_total_minutes()
+            hours = minutes // 60
+            mins = minutes % 60
+            return "%dh %dm" % (hours, mins)
+        except CodeTimeError as e:
+            if e.status_code == 401:
+                return "CodeTime: Auth Failed"
+            return "CodeTime: Network Error"
+        except Exception:
+            return "CodeTime: Network Error"
 
     def _apply_status(self):
         if self._pending_status is not None:
